@@ -10,19 +10,21 @@ module.exports = {
   }),
 
   clusters: function() {
-    var pointsAndCentroids = kmeans(this.data(), {k: this.k(), iterations: this.iterations() });
+    var pointsAndCentroids = kmeans(this.data(), {k: this.k(), iterations: this.iterations(), selector: this.selector() });
     var points = pointsAndCentroids.points;
     var centroids = pointsAndCentroids.centroids;
 
     return centroids.map(function(centroid) {
       return {
         centroid: centroid.location(),
-        points: points.filter(function(point) { return point.label() == centroid.label() }).map(function(point) { return point.location() }),
+        points: points.filter(function(point) { return point.label() == centroid.label() }),
       };
     });
   },
 
   k: getterSetter(undefined, function(value) { return ((value % 1 == 0) & (value > 0)) }),
+
+  selector: getterSetter(),
 
   iterations: getterSetter(Math.pow(10, 3), function(value) { return ((value % 1 == 0) & (value > 0)) }),
 
@@ -32,9 +34,10 @@ function kmeans(data, config) {
   // default k
   var k = config.k || Math.round(Math.sqrt(data.length / 2));
   var iterations = config.iterations;
+  var selector = config.selector || function(x) { return x; };
 
   // initialize point objects with data
-  var points = data.map(function(vector) { return new Point(vector) });
+  var points = data.map(function(x) { return new Point(selector(x), x) });
 
   // intialize centroids randomly
   var centroids = [];
@@ -57,8 +60,9 @@ function kmeans(data, config) {
 };
 
 // objects
-function Point(location) {
+function Point(location, reference) {
   var self = this;
+  this.reference = reference;
   this.location = getterSetter(location);
   this.label = getterSetter();
   this.updateLabel = function(centroids) {
